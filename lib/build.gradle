@@ -1,12 +1,12 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 24
-    buildToolsVersion "24.0.1"
+    compileSdkVersion 29
+    buildToolsVersion "29.0.3"
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 24
+        targetSdkVersion 29
         versionCode 1
         versionName "1.0"
 
@@ -20,5 +20,6 @@ android {
 }
 
 dependencies {
-    compile 'com.github.adrielcafe:ffmpeg-android-java:2a627f6ecd@aar'
+	implementation 'com.writingminds:FFmpegAndroid:0.3.2'
 }
+
