@@ -10,6 +10,9 @@ android {
         versionCode 1
         versionName "1.0"
 
+        ndk {
+            abiFilters 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a'
+        }
     }
     buildTypes {
         release {
@@ -20,6 +23,5 @@ android {
 }
 
 dependencies {
-	implementation 'com.writingminds:FFmpegAndroid:0.3.2'
+    implementation 'com.arthenica:mobile-ffmpeg-full:4.3.1'
 }
-

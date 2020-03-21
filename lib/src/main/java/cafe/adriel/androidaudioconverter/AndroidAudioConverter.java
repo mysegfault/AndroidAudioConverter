@@ -1,26 +1,30 @@
 package cafe.adriel.androidaudioconverter;
 
 import android.content.Context;
+import android.util.Log;
 
-import com.github.hiteshsondhi88.libffmpeg.FFmpeg;
-import com.github.hiteshsondhi88.libffmpeg.FFmpegExecuteResponseHandler;
-import com.github.hiteshsondhi88.libffmpeg.FFmpegLoadBinaryResponseHandler;
+import com.arthenica.mobileffmpeg.Config;
+import com.arthenica.mobileffmpeg.FFmpeg;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import cafe.adriel.androidaudioconverter.callback.IConvertCallback;
 import cafe.adriel.androidaudioconverter.callback.ILoadCallback;
 import cafe.adriel.androidaudioconverter.model.AudioFormat;
 
-public class AndroidAudioConverter {
+import static com.arthenica.mobileffmpeg.Config.RETURN_CODE_SUCCESS;
+import static com.arthenica.mobileffmpeg.Config.RETURN_CODE_CANCEL;
 
+public class AndroidAudioConverter {
     private static boolean loaded;
 
     private Context context;
     private File audioFile;
     private AudioFormat format;
     private IConvertCallback callback;
+    static String LOG_TAG = "AndroidAudioConverter";
 
     private AndroidAudioConverter(Context context){
         this.context = context;
@@ -32,29 +36,11 @@ public class AndroidAudioConverter {
 
     public static void load(Context context, final ILoadCallback callback){
         try {
-            FFmpeg.getInstance(context).loadBinary(new FFmpegLoadBinaryResponseHandler() {
-                        @Override
-                        public void onStart() {
+            List<String> externalLibraries = Config.getExternalLibraries();
+            Log.i(LOG_TAG, String.valueOf(externalLibraries));
 
-                        }
-
-                        @Override
-                        public void onSuccess() {
-                            loaded = true;
-                            callback.onSuccess();
-                        }
-
-                        @Override
-                        public void onFailure() {
-                            loaded = false;
-                            callback.onFailure(new Exception("Failed to loaded FFmpeg lib"));
-                        }
-
-                        @Override
-                        public void onFinish() {
-
-                        }
-                    });
+            loaded = true;
+            callback.onSuccess();
         } catch (Exception e){
             loaded = false;
             callback.onFailure(e);
@@ -81,47 +67,34 @@ public class AndroidAudioConverter {
     }
 
     public void convert() {
-        if(!isLoaded()){
+        if (!isLoaded()){
             callback.onFailure(new Exception("FFmpeg not loaded"));
             return;
         }
-        if(audioFile == null || !audioFile.exists()){
+
+        if (audioFile == null || !audioFile.exists()){
             callback.onFailure(new IOException("File not exists"));
             return;
         }
-        if(!audioFile.canRead()){
+        if (!audioFile.canRead()){
             callback.onFailure(new IOException("Can't read the file. Missing permission?"));
             return;
         }
         final File convertedFile = getConvertedFile(audioFile, format);
         final String[] cmd = new String[]{"-y", "-i", audioFile.getPath(), convertedFile.getPath()};
         try {
-            FFmpeg.getInstance(context).execute(cmd, new FFmpegExecuteResponseHandler() {
-                        @Override
-                        public void onStart() {
-
-                        }
-
-                        @Override
-                        public void onProgress(String message) {
-
-                        }
-
-                        @Override
-                        public void onSuccess(String message) {
-                            callback.onSuccess(convertedFile);
-                        }
-
-                        @Override
-                        public void onFailure(String message) {
-                            callback.onFailure(new IOException(message));
-                        }
-
-                        @Override
-                        public void onFinish() {
-
-                        }
-                    });
+            int rc = FFmpeg.execute(cmd);
+            if (rc == RETURN_CODE_SUCCESS) {
+                Log.i(Config.TAG, "Command execution completed successfully.");
+                callback.onSuccess(convertedFile);
+            } else if (rc == RETURN_CODE_CANCEL) {
+                Log.i(Config.TAG, "Command execution cancelled by user.");
+                callback.onFailure(new IOException("Command execution cancelled by user."));
+            } else {
+                Log.i(Config.TAG, String.format("Command execution failed with rc=%d and the output below.", rc));
+                callback.onFailure(new IOException(String.format("Command execution failed with rc=%d and the output below.", rc)));
+                Config.printLastCommandOutput(Log.INFO);
+            }
         } catch (Exception e){
             callback.onFailure(e);
         }
